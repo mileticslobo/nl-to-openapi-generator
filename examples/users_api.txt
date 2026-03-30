@@ -1,0 +1,1 @@
+I need an endpoint to list users filtered by status (active, inactive, pending), and another endpoint to create a new user with name and email.

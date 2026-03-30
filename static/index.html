@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NL to OpenAPI Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --border:   #2e3141;
+      --accent:   #6c63ff;
+      --accent-h: #8b85ff;
+      --text:     #e2e4ef;
+      --muted:    #6b7080;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --radius:   8px;
+      --font-mono: "Fira Code", "Cascadia Code", "Consolas", monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 600; letter-spacing: -0.02em; }
+    header .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 99px;
+      letter-spacing: 0.05em;
+    }
+    header .subtitle { margin-left: auto; color: var(--muted); font-size: 0.85rem; }
+
+    /* ── Main layout ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      gap: 1rem;
+    }
+    .panel + .panel { border-left: 1px solid var(--border); }
+
+    .panel-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    /* ── Input panel ── */
+    textarea {
+      flex: 1;
+      min-height: 220px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      padding: 0.875rem 1rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.85rem;
+      padding: 0.5rem 0.75rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    button.primary {
+      flex: 1;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.6rem 1.25rem;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    button.primary:hover:not(:disabled) { background: var(--accent-h); }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Example prompts ── */
+    .examples-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .examples {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .example-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.8rem;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s, color 0.15s;
+      line-height: 1.4;
+    }
+    .example-chip:hover { border-color: var(--accent); color: var(--accent-h); }
+
+    /* ── Output panel ── */
+    .output-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .output-header .panel-label { flex: 1; }
+
+    .badge-valid {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      letter-spacing: 0.05em;
+    }
+    .badge-valid.ok  { background: rgba(34,197,94,0.15); color: var(--green); }
+    .badge-valid.err { background: rgba(239,68,68,0.15);  color: var(--red); }
+    .badge-valid.hidden { display: none; }
+
+    button.copy {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-size: 0.78rem;
+      padding: 3px 10px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    button.copy:hover { border-color: var(--accent); color: var(--text); }
+
+    .code-wrap {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: auto;
+      min-height: 300px;
+      position: relative;
+    }
+
+    pre {
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.65;
+      white-space: pre;
+      color: var(--text);
+    }
+
+    .placeholder-msg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+    .placeholder-msg .icon { font-size: 2rem; opacity: 0.4; }
+
+    /* Spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius);
+      color: var(--red);
+      font-size: 0.82rem;
+      padding: 0.75rem 1rem;
+      display: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      main { grid-template-columns: 1fr; }
+      .panel + .panel { border-left: none; border-top: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>NL to OpenAPI Generator</h1>
+  <span class="badge">GPT-4o</span>
+  <span class="subtitle">Natural language → OpenAPI 3.0 YAML</span>
+</header>
+
+<main>
+  <!-- ── Left: Input ── -->
+  <div class="panel">
+    <span class="panel-label">Describe your API</span>
+
+    <textarea
+      id="description"
+      placeholder="e.g. I need an endpoint to list users filtered by status, and another endpoint to create a new user with name and email."
+      rows="10"
+    ></textarea>
+
+    <div class="controls">
+      <select id="model">
+        <option value="gpt-4o">gpt-4o</option>
+        <option value="gpt-4o-mini">gpt-4o-mini</option>
+        <option value="gpt-4-turbo">gpt-4-turbo</option>
+      </select>
+      <button class="primary" id="generateBtn" onclick="generate()">
+        <span class="spinner" id="spinner"></span>
+        <span id="btnLabel">Generate YAML</span>
+      </button>
+    </div>
+
+    <div id="errorBox" class="error-box"></div>
+
+    <span class="examples-label">Try an example</span>
+    <div class="examples">
+      <button class="example-chip" onclick="fillExample(0)">
+        List users filtered by status + create a user with name and email
+      </button>
+      <button class="example-chip" onclick="fillExample(1)">
+        Product catalog: list products with category/price filters, get a single product, and create a new product
+      </button>
+      <button class="example-chip" onclick="fillExample(2)">
+        Blog API: list published posts, get a post by slug, create a post, and delete a post by ID
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Right: Output ── -->
+  <div class="panel">
+    <div class="output-header">
+      <span class="panel-label">Generated OpenAPI YAML</span>
+      <span class="badge-valid hidden" id="validBadge"></span>
+      <button class="copy" id="copyBtn" onclick="copyYaml()" style="display:none">Copy</button>
+    </div>
+
+    <div class="code-wrap" id="codeWrap">
+      <div class="placeholder-msg" id="placeholder">
+        <span class="icon">⚙️</span>
+        <span>Your OpenAPI spec will appear here</span>
+      </div>
+      <pre id="output"></pre>
+    </div>
+  </div>
+</main>
+
+<script>
+  const EXAMPLES = [
+    `I need an endpoint to list users filtered by status (active, inactive, pending), and another endpoint to create a new user with name and email.`,
+    `Build a product catalog API with:
+- GET /products: list all products, support filtering by category (string) and maxPrice (number), with pagination
+- GET /products/{id}: retrieve a single product by ID
+- POST /products: create a new product with name, description, price, and category`,
+    `A blog API with the following endpoints:
+- List all published posts (support filtering by tag)
+- Get a single post by its slug
+- Create a new post with title, body, authorId, and optional tags array
+- Delete a post by its numeric ID`,
+  ];
+
+  function fillExample(idx) {
+    document.getElementById("description").value = EXAMPLES[idx];
+    document.getElementById("errorBox").style.display = "none";
+  }
+
+  async function generate() {
+    const description = document.getElementById("description").value.trim();
+    if (!description) return;
+
+    const model = document.getElementById("model").value;
+    const btn   = document.getElementById("generateBtn");
+    const spinner = document.getElementById("spinner");
+    const label = document.getElementById("btnLabel");
+    const errorBox = document.getElementById("errorBox");
+
+    // Reset UI
+    btn.disabled = true;
+    spinner.style.display = "block";
+    label.textContent = "Generating...";
+    errorBox.style.display = "none";
+    document.getElementById("output").textContent = "";
+    document.getElementById("placeholder").style.display = "flex";
+    document.getElementById("copyBtn").style.display = "none";
+    setValidBadge(null);
+
+    try {
+      const res = await fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description, model }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || `HTTP ${res.status}`);
+      }
+
+      document.getElementById("placeholder").style.display = "none";
+      document.getElementById("output").textContent = data.yaml;
+      document.getElementById("copyBtn").style.display = "block";
+      setValidBadge(data.valid, data.errors);
+
+    } catch (err) {
+      errorBox.textContent = `Error: ${err.message}`;
+      errorBox.style.display = "block";
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = "none";
+      label.textContent = "Generate YAML";
+    }
+  }
+
+  function setValidBadge(valid, errors) {
+    const badge = document.getElementById("validBadge");
+    if (valid === null) {
+      badge.className = "badge-valid hidden";
+      return;
+    }
+    badge.className = `badge-valid ${valid ? "ok" : "err"}`;
+    badge.textContent = valid ? "✓ Valid" : "✗ Invalid";
+    badge.title = valid ? "" : (errors || []).join("\n");
+  }
+
+  async function copyYaml() {
+    const text = document.getElementById("output").textContent;
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById("copyBtn");
+    btn.textContent = "Copied!";
+    setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+  }
+
+  // Ctrl+Enter to generate
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") generate();
+  });
+</script>
+
+</body>
+</html>

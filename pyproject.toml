@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nl-to-openapi-generator"
+version = "1.0.0"
+description = "Convert natural language API descriptions into valid OpenAPI 3.0 YAML specifications"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "Slobodan Miletic"}]
+keywords = ["openapi", "api", "llm", "prompt-engineering", "gpt-4"]
+
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "openai>=1.0.0",
+    "pyyaml>=6.0",
+    "openapi-spec-validator>=0.6.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/nl-to-openapi-generator"
+Repository = "https://github.com/yourusername/nl-to-openapi-generator.git"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=app --cov-report=html"
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["*/__init__.py"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.isort]
+profile = "black"
+line_length = 100
