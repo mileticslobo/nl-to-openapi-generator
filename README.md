@@ -1,25 +1,40 @@
 # NL to OpenAPI Generator
 
-Convert a plain-English description of an API into a valid **OpenAPI 3.0.3 YAML** specification using the OpenAI API.
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-orange.svg)](https://openai.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Portfolio project** demonstrating prompt engineering, structured LLM output, and OpenAPI fundamentals.
+**Transform natural language into production-ready OpenAPI 3.0.3 specifications using AI**
+
+> **Portfolio Project** showcasing full-stack development, AI integration, prompt engineering, and API design best practices.
 
 ---
 
-## Demo
+## 🎯 Problem Solved
 
-**Input**
+Writing OpenAPI specifications manually is tedious and error-prone. Developers spend hours crafting verbose YAML files, remembering HTTP conventions, and ensuring schema reusability. This tool eliminates that friction by converting plain English descriptions into validated, production-ready API specifications.
+
+---
+
+## 🚀 Live Demo
+
+**Input Description:**
 ```
-I need an endpoint to list users filtered by status, and another endpoint
-to create a new user with name and email.
+Create a REST API for managing users with the following features:
+- List all users with optional filtering by status (active/inactive/pending)
+- Create new users with name, email, and optional phone number
+- Include proper error responses and pagination
 ```
 
-**Output** — a complete, validated OpenAPI 3.0.3 spec:
+**Generated OpenAPI 3.0.3 Specification:**
 ```yaml
 openapi: "3.0.3"
 info:
-  title: Users API
+  title: User Management API
   version: "1.0.0"
+  description: API for managing users with CRUD operations
+
 paths:
   /users:
     get:
@@ -31,187 +46,338 @@ paths:
           schema:
             type: string
             enum: [active, inactive, pending]
-      ...
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: A list of users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserList"
     post:
       summary: Create a user
       operationId: createUser
       requestBody:
-        ...
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
   schemas:
-    User: ...
-    CreateUserRequest: ...
-    Error: ...
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, pending]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, email, status]
+    UserList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            totalItems:
+              type: integer
+            totalPages:
+              type: integer
+    CreateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+      required: [name, email]
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required: [code, message]
 ```
 
-See [`examples/users_api.yaml`](examples/users_api.yaml) for the full output.
+See [`examples/users_api.yaml`](examples/users_api.yaml) for the complete generated specification.
 
 ---
 
-## Features
+## ✨ Key Features
 
-- **Natural language → OpenAPI 3.0.3 YAML** via GPT-4o
-- **Prompt engineering** — carefully crafted system prompt enforces correct HTTP methods, path conventions, `$ref` reuse, required fields, and response codes
-- **Validation** — every generated spec is validated with `openapi-spec-validator` before being returned
-- **Web UI** — minimal single-page app with example prompts, model selector, and copy button
-- **CLI** — pipe-friendly command-line tool for scripting and batch use
-- **FastAPI backend** — auto-generated `/docs` (Swagger UI) for the generator's own API
-
----
-
-## Tech Stack
-
-| Layer      | Technology |
-|------------|------------|
-| Backend    | Python 3.11, FastAPI, Uvicorn |
-| LLM        | OpenAI `gpt-4o` (via `openai` SDK) |
-| Validation | `openapi-spec-validator` |
-| YAML       | `pyyaml` |
-| Frontend   | Vanilla HTML/CSS/JS (no build step) |
+- **🤖 AI-Powered Generation** — GPT-4o transforms natural language into valid OpenAPI specs
+- **✅ Automatic Validation** — Every spec is validated against OpenAPI 3.0.3 standards
+- **🎨 Web Interface** — Clean, responsive UI for interactive API design
+- **🖥️ CLI Tool** — Command-line interface for automation and CI/CD integration
+- **🏗️ Production Ready** — Docker support, comprehensive testing, and error handling
+- **📚 Self-Documenting** — Auto-generated FastAPI docs at `/docs`
 
 ---
 
-## Project Structure
+## 🏗️ Architecture & Tech Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Backend** | Python 3.9+, FastAPI, Uvicorn | REST API server with auto-generated docs |
+| **AI Engine** | OpenAI GPT-4o API | Natural language processing and YAML generation |
+| **Validation** | `openapi-spec-validator` | Ensures generated specs are valid |
+| **Serialization** | `pyyaml` | YAML parsing and generation |
+| **Frontend** | Vanilla HTML/CSS/JS | No-build web interface |
+| **Testing** | pytest, pytest-asyncio | Comprehensive test coverage |
+| **Deployment** | Docker, docker-compose | Containerized deployment |
+
+---
+
+## 📁 Project Structure
 
 ```
 nl-to-openapi-generator/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py          # FastAPI app — routes and request/response models
-│   ├── generator.py     # OpenAI API call + YAML parsing
-│   ├── validator.py     # openapi-spec-validator wrapper
-│   └── prompts.py       # System prompt (core prompt engineering)
-├── examples/
-│   ├── users_api.txt    # Example natural language input
-│   └── users_api.yaml   # Example generated output
+│   ├── main.py          # FastAPI application with routes
+│   ├── generator.py     # OpenAI integration and YAML processing
+│   ├── validator.py     # OpenAPI specification validation
+│   └── prompts.py       # System prompts for AI (prompt engineering)
 ├── static/
-│   └── index.html       # Web UI (single file, no framework)
-├── cli.py               # CLI entry point
-├── requirements.txt
-├── .env.example
+│   └── index.html       # Web UI (single-page application)
+├── tests/
+│   ├── test_generator.py # Unit tests for AI generation
+│   ├── test_main.py     # API endpoint tests
+│   └── test_validator.py # Validation tests
+├── examples/
+│   ├── users_api.txt    # Sample input descriptions
+│   └── users_api.yaml   # Sample generated outputs
+├── cli.py               # Command-line interface
+├── requirements.txt     # Python dependencies
+├── pyproject.toml       # Project configuration
+├── Dockerfile           # Container definition
+├── docker-compose.yml   # Multi-container setup
 └── README.md
 ```
 
 ---
 
-## Quickstart
+## 🚀 Quick Start
 
-### 1. Clone and install
+### Prerequisites
+- Python 3.9+
+- OpenAI API key
+
+### 1. Clone and Setup
 
 ```bash
-git clone https://github.com/your-username/nl-to-openapi-generator.git
+git clone https://github.com/mileticslobo/nl-to-openapi-generator.git
 cd nl-to-openapi-generator
 
+# Create virtual environment
 python -m venv .venv
-source .venv/bin/activate       # Windows: .venv\Scripts\activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Set your API key
+### 2. Configure API Key
 
 ```bash
 cp .env.example .env
-# Edit .env and add your OpenAI API key:
-# OPENAI_API_KEY=sk-...
+# Edit .env and add your OpenAI API key
+# OPENAI_API_KEY=sk-your-key-here
 ```
 
-### 3a. Run the web app
+### 3. Run the Application
 
+**Option A: Web Interface**
 ```bash
 uvicorn app.main:app --reload
 ```
+Open [http://localhost:8000](http://localhost:8000) for the web UI.
 
-Open [http://localhost:8000](http://localhost:8000) — the UI loads instantly.
-
-The FastAPI auto-docs are available at [http://localhost:8000/docs](http://localhost:8000/docs).
-
-### 3b. Use the CLI
-
+**Option B: Command Line**
 ```bash
-# Pass description directly
-python cli.py "An endpoint to list products and create a new product"
+# Direct input
+python cli.py "Create endpoints to manage blog posts with CRUD operations"
 
-# Read from file, save to YAML
-python cli.py --file examples/users_api.txt --output out.yaml
+# From file
+python cli.py --file examples/users_api.txt --output api.yaml
 
-# Pipe input
-echo "Delete a user by ID" | python cli.py
+# Piped input
+echo "API for managing products with categories" | python cli.py
 
-# Use a cheaper model
-python cli.py --model gpt-4o-mini "List blog posts filtered by tag"
+# Different model
+python cli.py --model gpt-4o-mini "Simple user registration endpoint"
 ```
 
 ---
 
-## How It Works
+## 🔧 How It Works
 
 ```
-User input (natural language)
+Natural Language Input
         │
         ▼
-┌───────────────────┐
-│   System Prompt   │  ← Prompt engineering:
-│   (prompts.py)    │    enforces OpenAPI structure,
-│                   │    HTTP conventions, $ref reuse
-└────────┬──────────┘
-         │
-         ▼
-┌───────────────────┐
-│   OpenAI API      │  gpt-4o, temperature=0.2
-│   (generator.py)  │  (low temp = consistent output)
-└────────┬──────────┘
-         │ raw YAML string
-         ▼
-┌───────────────────┐
-│   YAML Parser     │  yaml.safe_load()
-│   (generator.py)  │  strips markdown fences if present
-└────────┬──────────┘
-         │ Python dict
-         ▼
-┌───────────────────┐
-│   Validator       │  openapi-spec-validator
-│   (validator.py)  │  returns (is_valid, errors)
-└────────┬──────────┘
-         │
-         ▼
-    JSON response
-    { yaml, valid, errors }
+┌─────────────────────┐
+│   System Prompt     │  ← Carefully engineered prompts
+│   (app/prompts.py)  │    enforce OpenAPI conventions
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│   OpenAI GPT-4o     │  Temperature: 0.2 for consistency
+│   (app/generator.py)│  Structured output generation
+└─────────┬───────────┘
+          │ Raw YAML Response
+          ▼
+┌─────────────────────┐
+│   YAML Processing   │  Parse and clean response
+│   (app/generator.py)│  Strip markdown fences if present
+└─────────┬───────────┘
+          │ Python Dictionary
+          ▼
+┌─────────────────────┐
+│   OpenAPI Validator │  Validate against 3.0.3 spec
+│   (app/validator.py)│  Return validation errors if any
+└─────────┬───────────┘
+          │
+          ▼
+   Validated API Spec
+   { yaml, valid, errors }
 ```
 
-### Prompt Engineering Highlights
+### 🤖 Prompt Engineering
 
-The system prompt in `app/prompts.py` is the core of the project. Key decisions:
+The core innovation lies in `app/prompts.py`. Key techniques:
 
-- **Temperature 0.2** — reduces hallucinations and produces more consistent YAML structure
-- **"Output ONLY raw YAML"** — no markdown fences, no prose; model is told the first line must be `openapi: "3.0.3"`
-- **Explicit rules for HTTP methods**, path design, pagination parameters, response codes, and `$ref` usage — without these, models tend to produce flat, non-reusable specs
-- **Defensive stripping** — `generator.py` still strips markdown fences in case the model includes them despite instructions
-
----
-
-## Example Prompts
-
-| Prompt | What it exercises |
-|--------|-------------------|
-| `List users filtered by status, create a user with name and email` | query params, POST with requestBody, $ref schemas |
-| `Product catalog: list with category/price filters, get by ID, create` | path params, multiple endpoints, reusable schemas |
-| `Blog API: list posts, get by slug, create with tags array, delete by ID` | array fields, DELETE with 204, slug path param |
+- **Temperature Control**: 0.2 reduces hallucinations while maintaining creativity
+- **Structured Instructions**: Explicit rules for HTTP methods, path design, and schema reuse
+- **Defensive Parsing**: Robust handling of AI responses with fallback mechanisms
+- **Convention Enforcement**: Ensures RESTful patterns and OpenAPI best practices
 
 ---
 
-## Future Improvements
+## 📋 Use Cases
 
-- [ ] **Streaming output** — stream tokens to the UI as they arrive
-- [ ] **Multi-turn refinement** — "add an update endpoint" as a follow-up
-- [ ] **YAML → JSON toggle** — output as JSON Schema or OpenAPI JSON
-- [ ] **Swagger UI preview** — render the generated spec live using Swagger UI CDN
-- [ ] **Export as file** — download button for the generated `.yaml`
-- [ ] **GitHub Actions CI** — lint and validate example specs on push
-- [ ] **Docker** — `Dockerfile` and `docker-compose.yml` for one-command startup
-- [ ] **Tests** — pytest suite with mocked OpenAI responses
+### For Developers
+- **Rapid Prototyping**: Sketch API designs without YAML syntax knowledge
+- **Documentation Automation**: Generate specs from existing code comments
+- **API Design Reviews**: Validate designs before implementation
+
+### For Teams
+- **Standardization**: Ensure consistent API documentation across projects
+- **Onboarding**: Help new developers understand API structures quickly
+- **Legacy Migration**: Document undocumented APIs from descriptions
+
+### For Organizations
+- **API Governance**: Maintain standards across multiple development teams
+- **Developer Experience**: Reduce time spent on boilerplate documentation
+- **Tool Integration**: CLI support for CI/CD pipelines
 
 ---
 
-## License
+## 🧪 Testing
 
-MIT
+```bash
+# Run all tests
+pytest
+
+# With coverage
+pytest --cov=app --cov-report=html
+
+# Specific test file
+pytest tests/test_generator.py -v
+```
+
+---
+
+## 🐳 Docker Deployment
+
+```bash
+# Build and run
+docker-compose up --build
+
+# Or with Docker directly
+docker build -t nl-to-openapi .
+docker run -p 8000:8000 -e OPENAI_API_KEY=your-key nl-to-openapi
+```
+
+---
+
+## 🔮 Future Enhancements
+
+- [ ] **Real-time Streaming**: Show generation progress in the UI
+- [ ] **Multi-turn Conversations**: Refine specs with follow-up requests
+- [ ] **Format Options**: JSON Schema, Postman collections
+- [ ] **Live Preview**: Embedded Swagger UI for generated specs
+- [ ] **GitHub Integration**: Pull request comments with generated specs
+- [ ] **Custom Models**: Support for fine-tuned or local LLMs
+- [ ] **Batch Processing**: Generate multiple specs from a directory
+- [ ] **API Import**: Generate specs from existing API calls
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- OpenAI for the GPT-4o model
+- FastAPI community for excellent documentation
+- OpenAPI Initiative for the specification standard
+
+---
+
+**Built with ❤️ by [Slobodan Miletic](https://github.com/mileticslobo)**
